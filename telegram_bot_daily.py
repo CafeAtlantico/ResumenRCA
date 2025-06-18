@@ -57,5 +57,5 @@ def enviar_resumen():
     })
 
 # Para pruebas locales
-if name == "main":
+if _name_ == "_main_":
     enviar_resumen()
