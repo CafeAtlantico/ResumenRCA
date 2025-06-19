@@ -1,1 +1,77 @@
-def obtener_titulares(): return [ { "pais": "🇻🇪", "titulo": "Festival de Tambores inicia en Caracas con más de 30 actividades", "descripcion": "La III edición del Festacove arranca este jueves en La Carlota con una gala inaugural.", "url": "https://ciudadccs.info/publicacion/65549/a-favor-o-en-contra-abrira-festacove" }, { "pais": "🇻🇪", "titulo": "Luis Felipe Hidalgo será homenajeado en el Festacove 2025", "descripcion": "El promotor cultural recibirá reconocimiento por su trabajo con comunidades afrovenezolanas.", "url": "https://ciudadccs.info/publicacion/65550/festacove-invita-a-celebrar-la-afrovenezolanidad" }, { "pais": "🇨🇴", "titulo": "Festival Folclórico Colombiano celebra el San Pedro en Ibagué", "descripcion": "Con desfiles y danzas típicas, continúa la celebración patrimonial en Tolima.", "url": "https://www.alertatolima.com/noticias/tolima/ibague/ibague-se-engalana-para-el-51o-festival-folclorico-colombiano" }, { "pais": "🇵🇪", "titulo": "El Inti Raymi 2025 se alista en Cusco para el 24 de junio", "descripcion": "El espectáculo incaico será transmitido por TV Perú y espera miles de turistas.", "url": "https://elcomercio.pe/lima/cusco-celebra-el-inti-raymi-2025-lo-que-debes-saber-sobre-la-fiesta-del-sol-noticia/" }, { "pais": "🇨🇻", "titulo": "Morna y funaná caboverdianos suenan en el festival de Coimbra", "descripcion": "Portugal celebra los ritmos criollos africanos con músicos de Cabo Verde.", "url": "https://africulturban.pt/morna-funana-cabo-verde-coimbra" }, { "pais": "🇦🇷", "titulo": "Paola Bernal gira con su nuevo álbum de raíz folklórica", "descripcion": "La artista cordobesa recorre la provincia con ‘Agua de flores’, su última producción.", "url": "https://www.pagina12.com.ar/folklore/paola-bernal-agua-de-flores" } ]
+import requests
+import datetime
+import os
+
+# Configuración
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+GNEWS_API_KEY = "e92b6cd7710b45a677d22d056e10e0f1"
+
+# Inicial: fecha de inicio del conteo de entregas
+ENTREGA_INICIAL = 1
+FECHA_INICIAL = datetime.date(2025, 6, 18)
+
+# Palabras clave y parámetros por idioma
+CONSULTAS = [
+    {"q": "música folclórica OR música tradicional OR folklore", "lang": "es", "country": "ve"},
+    {"q": "música folclórica OR música tradicional OR folklore", "lang": "es", "country": "co"},
+    {"q": "música popular OR folclore", "lang": "pt", "country": "br"},
+    {"q": "musique traditionnelle OR folklore", "lang": "fr", "country": "fr"},
+    {"q": "musica tradizionale OR folklore", "lang": "it", "country": "it"},
+    {"q": "música tradicional OR festival OR folklore", "lang": "es", "country": "ar"},
+    {"q": "musique africaine OR folklore", "lang": "fr", "country": "sn"},
+    {"q": "música cabo-verdiana OR morna OR funaná", "lang": "pt", "country": "cv"},
+]
+
+def obtener_titulares():
+    titulares = []
+    for consulta in CONSULTAS:
+        params = {
+            "q": consulta["q"],
+            "lang": consulta["lang"],
+            "country": consulta["country"],
+            "token": GNEWS_API_KEY,
+            "max": 2,  # Para no superar el límite diario de uso
+        }
+        res = requests.get("https://gnews.io/api/v4/search", params=params)
+        if res.status_code == 200:
+            datos = res.json()
+            for article in datos.get("articles", []):
+                titulo = article["title"]
+                descripcion = article["description"] or ""
+                if len(descripcion) > 300:
+                    descripcion = descripcion[:297] + "..."
+                titulares.append({
+                    "pais": f"🌍",  # Opcional: se puede cambiar si tenés un mapeo por país
+                    "titulo": titulo.strip(),
+                    "descripcion": descripcion.strip(),
+                    "url": article["url"]
+                })
+        else:
+            print(f"Error con consulta {consulta['country']}: {res.status_code}")
+    return titulares[:8]
+
+def enviar_resumen():
+    hoy = datetime.date.today()
+    dias_pasados = (hoy - FECHA_INICIAL).days
+    nro_entrega = ENTREGA_INICIAL + dias_pasados
+    fecha_str = hoy.strftime("%d/%m/%y")
+    numero = f"2025-{nro_entrega:03d}"
+
+    titulares = obtener_titulares()
+
+    mensaje = f"🎶 *Resumen de folclore RCA – {fecha_str} – Nº {numero}*\n"
+    for i, item in enumerate(titulares, start=1):
+        mensaje += f"\n{i}. {item['pais']} *{item['titulo']}*\n"
+        mensaje += f"📰 {item['descripcion']}\n"
+        mensaje += f"🔗 {item['url']}\n"
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, data={
+        "chat_id": CHAT_ID,
+        "text": mensaje,
+        "parse_mode": "Markdown"
+    })
+
+if __name__ == "__main__":
+    enviar_resumen()
