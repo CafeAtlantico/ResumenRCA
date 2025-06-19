@@ -1,27 +1,22 @@
-name: Enviar resumen folclore RCA diario
+name: Ejecutar bot diario
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # 9:00 AM hora Argentina (UTC-3)
+    - cron: '0 12 * * *'  # 9:00 AM Argentina (UTC-3 corresponde a 12:00 UTC)
   workflow_dispatch:
 
 jobs:
-  enviar_resumen:
+  run-bot:
     runs-on: ubuntu-latest
-    env:
-      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-      CHAT_ID: ${{ secrets.CHAT_ID }}
     steps:
-      - name: Clonar repositorio
+      - name: Clonar repo
         uses: actions/checkout@v3
-
-      - name: Configurar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
 
       - name: Instalar dependencias
         run: pip install requests
 
       - name: Ejecutar bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python telegram_bot_daily.py
