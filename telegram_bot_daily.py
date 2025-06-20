@@ -25,24 +25,27 @@ CONSULTAS = [
 
 def obtener_titulares():
     titulares = []
+    hace_24h = (datetime.datetime.utcnow() - datetime.timedelta(hours=24)).isoformat("T") + "Z"
+
     for consulta in CONSULTAS:
         params = {
             "q": consulta["q"],
             "lang": consulta["lang"],
             "country": consulta["country"],
             "token": GNEWS_API_KEY,
-            "max": 2,  # Para no superar el límite diario de uso
+            "max": 2,
+            "from": hace_24h
         }
         res = requests.get("https://gnews.io/api/v4/search", params=params)
         if res.status_code == 200:
             datos = res.json()
             for article in datos.get("articles", []):
                 titulo = article["title"]
-                descripcion = article["description"] or ""
+                descripcion = article.get("description") or ""
                 if len(descripcion) > 300:
                     descripcion = descripcion[:297] + "..."
                 titulares.append({
-                    "pais": f"🌍",  # Opcional: se puede cambiar si tenés un mapeo por país
+                    "pais": f"🌍",
                     "titulo": titulo.strip(),
                     "descripcion": descripcion.strip(),
                     "url": article["url"]
